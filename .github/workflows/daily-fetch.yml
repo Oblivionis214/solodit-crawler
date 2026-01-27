@@ -1,0 +1,44 @@
+name: Daily Solodit Fetch
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC (10 AM Beijing time)
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run fetch script
+        env:
+          SOLODIT_API_KEY: ${{ secrets.SOLODIT_API_KEY }}
+        run: python fetch_solodit.py
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update Solodit findings $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
