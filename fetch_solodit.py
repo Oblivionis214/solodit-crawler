@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -10,6 +11,11 @@ from pathlib import Path
 
 import requests
 from openpyxl import Workbook, load_workbook
+
+# Regex pattern to match illegal Excel characters (control chars except tab, newline, carriage return)
+ILLEGAL_CHARACTERS_RE = re.compile(
+    r'[\x00-\x08\x0b\x0c\x0e-\x1f]'
+)
 
 # Configuration
 API_URL = "https://solodit.cyfrin.io/api/v1/solodit/findings"
@@ -44,6 +50,15 @@ def get_api_key():
         print("Error: SOLODIT_API_KEY environment variable not set")
         sys.exit(1)
     return api_key
+
+
+def clean_string(value):
+    """Remove illegal Excel characters from string."""
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        return value
+    return ILLEGAL_CHARACTERS_RE.sub('', value)
 
 
 def load_state():
@@ -83,23 +98,23 @@ def finding_to_row(finding):
     """Convert a finding dict to a row list for xlsx."""
     return [
         finding.get("id", ""),
-        finding.get("slug", ""),
-        finding.get("title", ""),
+        clean_string(finding.get("slug", "")),
+        clean_string(finding.get("title", "")),
         finding.get("impact", ""),
         finding.get("quality_score", ""),
         finding.get("general_score", ""),
-        finding.get("firm_name", ""),
-        finding.get("protocol_name", ""),
-        finding.get("content", ""),
-        finding.get("summary", ""),
-        extract_tags(finding),
-        extract_finders(finding),
+        clean_string(finding.get("firm_name", "")),
+        clean_string(finding.get("protocol_name", "")),
+        clean_string(finding.get("content", "")),
+        clean_string(finding.get("summary", "")),
+        clean_string(extract_tags(finding)),
+        clean_string(extract_finders(finding)),
         finding.get("finders_count", ""),
-        finding.get("source_link", ""),
-        finding.get("github_link", ""),
-        finding.get("pdf_link", ""),
-        finding.get("contest_link", ""),
-        finding.get("contest_prize_txt", ""),
+        clean_string(finding.get("source_link", "")),
+        clean_string(finding.get("github_link", "")),
+        clean_string(finding.get("pdf_link", "")),
+        clean_string(finding.get("contest_link", "")),
+        clean_string(finding.get("contest_prize_txt", "")),
         str(finding.get("report_date", "")) if finding.get("report_date") else ""
     ]
 
